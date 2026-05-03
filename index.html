@@ -331,18 +331,64 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 
 <!-- ======= REGISTRO ======= -->
 <div class="sec" id="tab-registro">
-  <div class="card c1 reg-card">
-    <div class="card-title"><span class="ct-dot" style="background:var(--c1)"></span>Nueva Transacción</div>
-    <div class="type-tog"><button id="bg" class="ga" onclick="setT('G')">Gasto</button><button id="bi" onclick="setT('I')">Ingreso</button></div>
-    <div class="fgrid" style="margin-bottom:10px">
-      <div class="fg"><label>Categoría</label><select id="fcat" onchange="updG()"></select></div>
-      <div class="fg"><label>Grupo</label><select id="fgrup"></select></div>
-      <div class="fg"><label>Monto (S/)</label><input type="number" id="fmonto" placeholder="0.00" min="0" step="0.01"></div>
-      <div class="fg"><label>Fecha</label><input type="date" id="ffecha"></div>
-      <div class="fg" style="grid-column:1/-1"><label>Descripción</label><input type="text" id="fdesc" placeholder="Opcional..."></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
+
+    <!-- SALDO SEMANAL -->
+    <div class="card c4">
+      <div class="card-title"><span class="ct-dot" style="background:var(--c4)"></span>Control Semanal de Saldo</div>
+
+      <!-- Saldo anterior -->
+      <div style="background:var(--bg4);border-radius:8px;padding:12px 16px;margin-bottom:14px;border:1px solid var(--bor)">
+        <div style="font-family:var(--fontc);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt3);margin-bottom:4px">Saldo anterior acumulado</div>
+        <div style="font-family:var(--fontc);font-size:28px;font-weight:800;color:var(--c4)" id="saldo-anterior-display">S/ 0.00</div>
+        <div style="font-size:11px;color:var(--txt3);font-family:var(--fontc);margin-top:3px" id="saldo-anterior-sub">No hay saldo registrado</div>
+      </div>
+
+      <!-- Ingreso de saldo nuevo de la semana -->
+      <div class="fg" style="margin-bottom:12px">
+        <label>Saldo de esta semana (S/)</label>
+        <input type="number" id="saldo-semana" placeholder="Ej: 1500.00" min="0" step="0.01"
+          style="font-size:18px;font-weight:700;color:var(--c4);border-color:var(--c4)">
+        <div style="font-size:11px;color:var(--txt3);font-family:var(--fontc);margin-top:4px">Ingresá el dinero disponible para gastar esta semana</div>
+      </div>
+      <button class="btn-r" style="border-color:var(--c4);color:var(--c4);width:100%;margin-bottom:14px" onclick="setSaldoSemana()">Establecer saldo semanal</button>
+
+      <!-- Barra de progreso semanal -->
+      <div id="saldo-semana-panel" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-family:var(--fontc);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt3)">Gastado esta semana</div>
+          <div style="font-family:var(--fontc);font-size:13px;font-weight:800;color:var(--c3)" id="saldo-gastado-lbl">S/ 0.00</div>
+        </div>
+        <div style="height:10px;background:var(--bg4);border-radius:5px;overflow:hidden;margin-bottom:8px">
+          <div id="saldo-bar" style="height:100%;border-radius:5px;background:var(--c2);transition:width .4s,background .3s;width:0%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <div style="font-family:var(--fontc);font-size:12px;color:var(--txt3)">Disponible: <span id="saldo-disp" style="font-weight:800;color:var(--c2)">S/ 0.00</span></div>
+          <div style="font-family:var(--fontc);font-size:12px;color:var(--txt3)">Total: <span id="saldo-total-lbl" style="font-weight:700;color:var(--c4)">S/ 0.00</span></div>
+        </div>
+        <div style="margin-top:10px;padding:8px 12px;background:var(--bg4);border-radius:6px;border:1px solid var(--bor)">
+          <div style="font-family:var(--fontc);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt3);margin-bottom:4px">Movimientos de esta semana</div>
+          <div id="saldo-txs-list" style="max-height:120px;overflow-y:auto;font-size:12px"></div>
+        </div>
+        <button class="btn-r" style="border-color:var(--c3);color:var(--c3);width:100%;margin-top:10px;font-size:11px" onclick="cerrarSemana()">Cerrar semana → pasar al saldo anterior</button>
+      </div>
     </div>
-    <div style="display:flex;gap:8px"><button class="btn-r pri" onclick="guardar()">Guardar</button><button class="btn-r" onclick="limpiar()">Limpiar</button></div>
-    <div id="save-st" style="font-family:var(--fontc);font-size:11px;color:var(--c4);margin-top:10px;display:none"></div>
+
+    <!-- NUEVA TRANSACCIÓN -->
+    <div class="card c1 reg-card">
+      <div class="card-title"><span class="ct-dot" style="background:var(--c1)"></span>Registrar Transacción</div>
+      <div class="type-tog"><button id="bg" class="ga" onclick="setT('G')">Gasto</button><button id="bi" onclick="setT('I')">Ingreso</button></div>
+      <div class="fgrid" style="margin-bottom:10px">
+        <div class="fg"><label>Categoría</label><select id="fcat" onchange="updG()"></select></div>
+        <div class="fg"><label>Grupo</label><select id="fgrup"></select></div>
+        <div class="fg"><label>Monto (S/)</label><input type="number" id="fmonto" placeholder="0.00" min="0" step="0.01"></div>
+        <div class="fg"><label>Fecha</label><input type="date" id="ffecha"></div>
+        <div class="fg" style="grid-column:1/-1"><label>Descripción</label><input type="text" id="fdesc" placeholder="Opcional..."></div>
+      </div>
+      <div style="display:flex;gap:8px"><button class="btn-r pri" onclick="guardar()">Guardar</button><button class="btn-r" onclick="limpiar()">Limpiar</button></div>
+      <div id="save-st" style="font-family:var(--fontc);font-size:11px;color:var(--c4);margin-top:10px;display:none"></div>
+    </div>
+
   </div>
 </div>
 
@@ -431,20 +477,20 @@ let ALL=[], OPTS={G:{},I:{}};
 let localNew=JSON.parse(localStorage.getItem('cg_new')||'[]');
 let deleted=new Set(JSON.parse(localStorage.getItem('cg_del')||'[]'));
 let budget=JSON.parse(localStorage.getItem('cg_bud')||JSON.stringify({
-  "Servicios":{"Agua":40,"Alquiler":1100,"Celular Brayan":150,"Celular Sasha":155.9,"Gas":45,"Internet":68.99,"Luz":150,"Netflix":12,"Spotify":11.9,"Seguro Desgravamen":15,"Claude":20,"Carro":0,"Membresias":0},
-  "Comida":{"Antojos":100,"Casa":500,"Fruta":0},
-  "Transporte":{"Combi":20,"Combustible":300,"Taxi":20,"Mantenimiento":0},
-  "Educacion":{"Alessandro":340,"Sasha":0,"Brayan":0,"Emilia":0},
-  "Bienestar":{"Salud":100,"Belleza":50},
-  "Compras":{"Tecnologia":0,"Muebles":0,"Hogar":0,"Mascota":20,"Limpieza":50},
+  "Comida":        {"Antojos":100,"Casa":500,"Fruta":0},
+  "Educacion":     {"Alessandro":340,"Sasha":0,"Brayan":0,"Emilia":0},
+  "Vestimenta":    {"Alessandro":0,"Sasha":0,"Brayan":0,"Emilia":0},
+  "Bienestar":     {"Salud":100,"Belleza":50},
+  "Transporte":    {"Combi":20,"Mantenimiento":0,"Combustible":300,"Taxi":20},
+  "Servicios":     {"Celular Sasha":155.9,"Celular Brayan":150,"Netflix":12,"Membresias":0,"Internet":68.99,"Seguro Desgravamen":15,"Alquiler":1100,"Luz":150,"Agua":40,"Gas":45,"Carro":0,"Spotify":11.9,"Claude":20},
+  "Compras":       {"Tecnologia":0,"Muebles":0,"Hogar":0,"Mascota":20,"Limpieza":50},
   "Entretenimiento":{"Familiar":0,"Pareja":0,"Personal":0,"Otros":0},
-  "Vestimenta":{"Alessandro":0,"Sasha":0,"Brayan":0,"Emilia":0},
-  "Obsequios":{"Regalos":0,"Donaciones":0},
-  "Ahorros":{"Bancos":0,"Inversion":0},
-  "Inversiones":{"Terreno":0,"Bolsa":0},
-  "Vacaciones":{"Estadia":0,"Alimentacion":0,"Transporte":0},
-  "Mantenimiento":{"Arreglos":0,"Carro":0,"Tecnicos":0},
-  "Tramites":{"Legales":0,"Educativos":0,"Pesonales":0}
+  "Vacaciones":    {"Estadia":0,"Alimentacion":0,"Transporte":0},
+  "Mantenimiento": {"Arreglos":0,"Carro":0,"Tecnicos":0},
+  "Obsequios":     {"Regalos":0,"Donaciones":0},
+  "Ahorros":       {"Bancos":0,"Inversion":0},
+  "Tramites":      {"Legales":0,"Educativos":0,"Pesonales":0},
+  "Inversiones":   {"Terreno":0}
 }));
 let goals=JSON.parse(localStorage.getItem('cg_goals')||JSON.stringify({metaAhorro:2000,metaEmergencia:37500,ahorroActual:0}));
 
@@ -521,8 +567,13 @@ async function loadData(){
   try{
     const[br,or]=await Promise.all([fetchSheet('Base de Datos'),fetchSheet('Opciones')]);
     ALL=br.filter(r=>r.Tipo).map((r,i)=>({i:r.ID||i+1,t:(r.Tipo||'').replace(/"/g,'').trim()==='Gastos'?'G':'I',c:(r.Categoria||'').replace(/"/g,'').trim(),g:(r.Grupo||'').replace(/"/g,'').trim(),d:(r.Descripcion||'').replace(/"/g,'').trim(),f:parseDate(r.Fecha),m:parseFloat(String(r.Monto||'0').replace(/["']/g,'').replace(',','.'))||0}));
-    OPTS={G:{},I:{}};
-    or.filter(r=>r.Tipo).forEach(r=>{const t=(r.Tipo||'').replace(/"/g,'').trim()==='Gastos'?'G':'I';const c=(r.Categoria||'').replace(/"/g,'').trim(),g=(r.Grupo||'').replace(/"/g,'').trim();if(!OPTS[t][c])OPTS[t][c]=[];if(!OPTS[t][c].includes(g))OPTS[t][c].push(g);});
+    // Start with static categories, then merge from Sheet
+    OPTS = JSON.parse(JSON.stringify(OPTS_STATIC));
+    or.filter(r=>r.Tipo).forEach(r=>{
+      const t=(r.Tipo||'').replace(/"/g,'').trim()==='Gastos'?'G':'I';
+      const c=(r.Categoria||'').replace(/"/g,'').trim(),g=(r.Grupo||'').replace(/"/g,'').trim();
+      if(c&&g){if(!OPTS[t][c])OPTS[t][c]=[];if(!OPTS[t][c].includes(g))OPTS[t][c].push(g);}
+    });
     document.getElementById('sync-time').textContent=new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'});
     return true;
   }catch(e){console.error(e);showErr('Error al conectar con Google Sheets. Verifica que el archivo sea público.');return false;}
@@ -542,6 +593,7 @@ function sw(t){
   document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
   document.getElementById('tab-'+t).classList.add('on');
   if(t==='resumen')renderResumen();
+  if(t==='registro')updateSaldoUI();
   if(t==='movimientos'){updFilCats();renderMov();}
   if(t==='graficos')setTimeout(renderGraficos,30);
   if(t==='presupuesto')renderPres();
@@ -563,7 +615,7 @@ function guardar(){
   const row={i:Date.now(),t:cT,c:cat,g:grup,d:desc,f:`${d}/${mo}/${y}`,m:monto};
   localNew.push(row);localStorage.setItem('cg_new',JSON.stringify(localNew));
   const st=document.getElementById('save-st');st.style.display='block';st.textContent=`Guardado localmente — ID sugerido: ${row.i}. Copiá al Google Sheet.`;
-  showToast('Guardado ✓');limpiar();refreshCur();
+  showToast('Guardado ✓');limpiar();refreshCur();updateSaldoUI();
 }
 
 // ── MOVIMIENTOS ──
@@ -832,6 +884,94 @@ function refreshCur(){
   const t=ts[[...document.querySelectorAll('.sbi')].indexOf(a)];
   if(t==='resumen')renderResumen();if(t==='movimientos'){updFilCats();renderMov();}
   if(t==='graficos')setTimeout(renderGraficos,30);if(t==='presupuesto')renderPres();if(t==='anual')setTimeout(renderAnual,30);
+}
+
+// ── SALDO SEMANAL ──
+let saldoState = JSON.parse(localStorage.getItem('cg_saldo') || JSON.stringify({
+  anterior: 0,          // saldo acumulado de semanas anteriores
+  semanaActual: 0,      // saldo fijado para la semana actual (0 = sin semana activa)
+  semanaInicio: null,   // fecha ISO de inicio de semana actual
+  semanaGastado: 0,     // calculado dinámico
+  activa: false
+}));
+
+function saveSaldo(){localStorage.setItem('cg_saldo',JSON.stringify(saldoState));}
+
+function setSaldoSemana(){
+  const val = parseFloat(document.getElementById('saldo-semana').value);
+  if(!val||val<=0){alert('Ingresá un monto válido');return;}
+  // Si hay semana activa, cerrarla primero automáticamente
+  if(saldoState.activa) cerrarSemanaInternal();
+  saldoState.semanaActual = val;
+  saldoState.semanaInicio = new Date().toISOString().split('T')[0];
+  saldoState.activa = true;
+  saveSaldo();
+  document.getElementById('saldo-semana').value = '';
+  updateSaldoUI();
+  showToast('Saldo semanal establecido: '+fm(val)+' ✓');
+}
+
+function cerrarSemana(){
+  if(!confirm('¿Cerrar la semana? El saldo restante se sumará al saldo anterior para la próxima semana.'))return;
+  cerrarSemanaInternal();
+  updateSaldoUI();
+  showToast('Semana cerrada. Saldo anterior actualizado ✓');
+}
+
+function cerrarSemanaInternal(){
+  const gastado = getSemanaGastado();
+  const restante = Math.max(0, saldoState.semanaActual - gastado);
+  saldoState.anterior += restante;
+  saldoState.semanaActual = 0;
+  saldoState.activa = false;
+  saldoState.semanaInicio = null;
+  saveSaldo();
+}
+
+function getSemanaGastado(){
+  if(!saldoState.activa || !saldoState.semanaInicio) return 0;
+  const inicio = saldoState.semanaInicio;
+  // Sum all gastos registered locally since semanaInicio
+  return localNew.filter(t=>{
+    return t.t==='G' && t.f >= inicio.split('-').reverse().join('/');
+  }).reduce((a,t)=>a+t.m, 0);
+}
+
+function updateSaldoUI(){
+  const panel = document.getElementById('saldo-semana-panel');
+  if(!panel) return;
+  // Saldo anterior display
+  document.getElementById('saldo-anterior-display').textContent = fm(saldoState.anterior);
+  document.getElementById('saldo-anterior-sub').textContent = saldoState.anterior > 0
+    ? 'Acumulado de semanas anteriores'
+    : 'Sin saldo acumulado aún';
+
+  if(saldoState.activa){
+    panel.style.display='block';
+    const gastado = getSemanaGastado();
+    const total = saldoState.semanaActual;
+    const disp = Math.max(0, total - gastado);
+    const pct = total > 0 ? Math.min((gastado/total)*100, 100) : 0;
+    const col = pct >= 100 ? 'var(--c3)' : pct >= 80 ? 'var(--c4)' : 'var(--c2)';
+
+    document.getElementById('saldo-gastado-lbl').textContent = fm(gastado);
+    document.getElementById('saldo-disp').textContent = fm(disp);
+    document.getElementById('saldo-disp').style.color = col;
+    document.getElementById('saldo-total-lbl').textContent = fm(total);
+    document.getElementById('saldo-bar').style.width = pct.toFixed(1)+'%';
+    document.getElementById('saldo-bar').style.background = col;
+
+    // List of week transactions
+    const txsSemana = localNew.filter(t => t.t==='G' && saldoState.semanaInicio && t.f >= saldoState.semanaInicio.split('-').reverse().join('/'));
+    const lista = document.getElementById('saldo-txs-list');
+    if(txsSemana.length){
+      lista.innerHTML = txsSemana.map(t=>`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--bor);color:var(--txt2)"><span style="font-family:var(--fontc);font-size:11px">${t.g}${t.d?' - '+t.d:''} <span style="color:var(--txt3)">${t.f}</span></span><span style="font-family:var(--fontc);font-size:11px;font-weight:700;color:var(--c3)">-${fm(t.m)}</span></div>`).join('');
+    } else {
+      lista.innerHTML = '<div style="color:var(--txt3);font-family:var(--fontc);font-size:11px;text-align:center;padding:8px">Sin gastos esta semana</div>';
+    }
+  } else {
+    panel.style.display='none';
+  }
 }
 
 (async function(){
