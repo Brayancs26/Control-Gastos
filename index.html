@@ -275,7 +275,7 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
   <div id="res-content" style="display:none">
 
     <!-- Métricas top -->
-    <div class="resumen-top" style="margin-bottom:12px" id="met-top"></div>
+    <div class="resumen-top" style="margin-bottom:12px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))" id="met-top"></div>
 
     <!-- Grid principal -->
     <div class="dash-grid">
@@ -300,8 +300,8 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
       <!-- Col 2: Calendario + Próximos pagos -->
       <div style="display:flex;flex-direction:column;gap:12px">
         <div class="card c4">
-          <div class="card-title"><span class="ct-dot" style="background:var(--c4)"></span>Días Críticos</div>
-          <div class="cal-grid" id="cal-grid"></div>
+          <div class="card-title"><span class="ct-dot" style="background:var(--c4)"></span>Gastos por Mes — Año Actual</div>
+          <div style="position:relative;height:160px"><canvas id="ch-meses"></canvas></div>
         </div>
         <div class="card c3">
           <div class="card-title"><span class="ct-dot" style="background:var(--c3)"></span>Próximos Pagos</div>
@@ -602,12 +602,16 @@ function renderResumen(){
   const gas=mes.filter(t=>t.t==='G').reduce((a,t)=>a+t.m,0);
   const bal=ing-gas;
   const total=getTxs().reduce((a,t)=>t.t==='G'?a+t.m:a,0);
+  const allIng=getTxs().filter(t=>t.t==='I').reduce((a,t)=>a+t.m,0);
+  const allGas=getTxs().filter(t=>t.t==='G').reduce((a,t)=>a+t.m,0);
+  const allBal=allIng-allGas;
 
   // Métricas top
   document.getElementById('met-top').innerHTML=`
     <div class="metric-big"><div class="bg-glow" style="background:var(--c2)"></div><div class="lbl"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,10 6,5 10,8 14,2"/></svg>Ingreso Total</div><div class="val grn">${fm(ing)}</div><div class="trend up">&#8593; Mes actual</div></div>
     <div class="metric-big"><div class="bg-glow" style="background:var(--c3)"></div><div class="lbl"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,6 6,11 10,8 14,12"/></svg>Gasto Total</div><div class="val red">${fm(gas)}</div><div class="trend ${gas>ing?'dn':'up'}">${gas>ing?'&#8593; Excede ingresos':'&#8595; Controlado'}</div></div>
-    <div class="metric-big"><div class="bg-glow" style="background:var(--c1)"></div><div class="lbl"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/></svg>Balance</div><div class="val ${bal>=0?'grn':'red'}">${bal<0?'-':''}${fm(Math.abs(bal))}</div><div class="sub">Histórico gastos: ${fm(total)}</div></div>`;
+    <div class="metric-big"><div class="bg-glow" style="background:var(--c1)"></div><div class="lbl"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/></svg>Balance del Mes</div><div class="val ${bal>=0?'grn':'red'}">${bal<0?'-':''}${fm(Math.abs(bal))}</div></div>
+    <div class="metric-big" style="border-top:1px solid var(--c5);background:linear-gradient(135deg,var(--bg3),var(--bg4))"><div class="bg-glow" style="background:var(--c5)"></div><div class="lbl" style="color:var(--c5)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,11 5,7 9,9 14,3"/><line x1="2" y1="14" x2="14" y2="14"/></svg>Balance General (Histórico)</div><div class="val" style="color:var(--c5)">${allBal>=0?'':'-'}${fm(Math.abs(allBal))}</div><div class="sub">+${fm(allIng)} ingresos / -${fm(allGas)} gastos</div></div>`;
 
   // Dona
   const cg={};mes.filter(t=>t.t==='G').forEach(t=>{cg[t.c]=(cg[t.c]||0)+t.m;});
@@ -621,6 +625,15 @@ function renderResumen(){
     document.getElementById('cat-list').innerHTML=cats.slice(0,7).map((c,i)=>`<div class="cat-row"><div class="cat-dot" style="background:${COLS[i]}"></div><span class="cat-name">${c}</span><span class="cat-val">${fm(vals[i])}</span><span class="cat-pct">${Math.round(vals[i]/totalG*100)}%</span></div>`).join('');
   }
 
+  // Gastos por mes del año actual
+  const yearNow=vY;
+  const mesesData=Array.from({length:12},(_,mi)=>{
+    const txM=getTxs().filter(t=>{const p=t.f.split('/');return p.length===3&&parseInt(p[2])===yearNow&&parseInt(p[1])-1===mi&&t.t==='G';});
+    return txM.reduce((a,t)=>a+t.m,0);
+  });
+  if(window._chMeses)window._chMeses.destroy();
+  window._chMeses=new Chart(document.getElementById('ch-meses'),{type:'bar',data:{labels:MES.map(m=>m.substring(0,3)),datasets:[{data:mesesData,backgroundColor:mesesData.map((_,i)=>i===vM?'#00e5ff':'#a78bfa'),borderRadius:4,borderColor:'transparent'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#4a5270',font:{family:'Barlow Condensed',size:10,weight:'600'}},grid:{color:'rgba(255,255,255,0.03)'}},y:{ticks:{color:'#4a5270',font:{family:'Barlow Condensed',size:10,weight:'600'},callback:v=>v>0?'S/'+Math.round(v/1000)+'k':'0'},grid:{color:'rgba(255,255,255,0.04)'},beginAtZero:true}}}});
+
   // Tendencia
   const nn=tendMode;const l=[];for(let i=nn-1;i>=0;i--){let m2=vM-i,y2=vY;while(m2<0){m2+=12;y2--;}l.push({l:MES[m2].substring(0,3)+"'"+String(y2).slice(2),y:y2,m:m2});}
   const txs=getTxs();
@@ -629,8 +642,6 @@ function renderResumen(){
   if(chTend)chTend.destroy();
   chTend=new Chart(document.getElementById('ch-tend'),{type:'line',data:{labels:l.map(x=>x.l),datasets:[{data:ie,borderColor:'#00ff9d',backgroundColor:'rgba(0,255,157,0.15)',tension:0.4,fill:true,pointRadius:3,pointBackgroundColor:'#00ff9d',borderWidth:2},{data:ge,borderColor:'#ff4d6a',backgroundColor:'rgba(255,77,106,0.1)',tension:0.4,fill:true,pointRadius:3,pointBackgroundColor:'#ff4d6a',borderWidth:2}]},options:{...CC,responsive:true,maintainAspectRatio:false}});
 
-  // Calendario
-  renderCal();
 
   // Próximos pagos fijos
   const pagos=[
