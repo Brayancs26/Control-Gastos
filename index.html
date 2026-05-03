@@ -546,12 +546,60 @@ function parseCSV(text){
   const h=pr(lines[0]);
   return lines.slice(1).filter(l=>l.trim()).map(l=>{const v=pr(l);const o={};h.forEach((k,i)=>{o[k]=v[i]||null;});return o;});
 }
+
+// Parse GViz JSON response
+function parseGvizJSON(text){
+  try{
+    const json=JSON.parse(text.slice(47,-2));
+    const cols=json.table.cols.map(c=>c.label);
+    return json.table.rows.map(r=>{const o={};r.c.forEach((cell,i)=>{o[cols[i]]=cell?cell.v:null;});return o;});
+  }catch(e){return null;}
+}
+
 async function fetchSheet(s){
-  // Requires "Publish to web" in Google Sheets (Archivo > Publicar en la web)
-  const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(s)}`;
-  const res=await fetch(url);
-  if(!res.ok)throw new Error(`No se pudo cargar ${s} (HTTP ${res.status}). Publicá el Sheet en Archivo > Publicar en la web`);
-  return parseCSV(await res.text());
+  const base=`https://docs.google.com/spreadsheets/d/${SHEET_ID}`;
+  const errors=[];
+
+  // Method 1: gviz JSON (works if sheet is shared publicly)
+  try{
+    const url=`${base}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(s)}&headers=1`;
+    const res=await fetch(url,{cache:'no-store'});
+    if(res.ok){
+      const text=await res.text();
+      if(text.includes('table')){
+        const data=parseGvizJSON(text);
+        if(data&&data.length>0)return data;
+      }
+    }
+  }catch(e){errors.push('gviz-json: '+e.message);}
+
+  // Method 2: gviz CSV
+  try{
+    const url=`${base}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(s)}`;
+    const res=await fetch(url,{cache:'no-store'});
+    if(res.ok){
+      const text=await res.text();
+      if(text.length>50&&!text.includes('<html')){
+        const data=parseCSV(text);
+        if(data&&data.length>0)return data;
+      }
+    }
+  }catch(e){errors.push('gviz-csv: '+e.message);}
+
+  // Method 3: pub export CSV (needs "Publish to web")
+  try{
+    const url=`${base}/pub?output=csv&sheet=${encodeURIComponent(s)}`;
+    const res=await fetch(url,{cache:'no-store'});
+    if(res.ok){
+      const text=await res.text();
+      if(text.length>50&&!text.includes('<html')){
+        const data=parseCSV(text);
+        if(data&&data.length>0)return data;
+      }
+    }
+  }catch(e){errors.push('pub-csv: '+e.message);}
+
+  throw new Error(`No se pudo conectar con Google Sheets. \n\nSolución: \n1. Abrí tu Google Sheet \n2. Archivo → Compartir → Publicar en la web \n3. Publicar → Aceptar \n\nErrores: ${errors.join(', ')}`);
 }
 function parseDate(v){
   if(!v)return'';
@@ -576,9 +624,25 @@ async function loadData(){
     });
     document.getElementById('sync-time').textContent=new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'});
     return true;
-  }catch(e){console.error(e);showErr('Error al conectar con Google Sheets. Verifica que el archivo sea público.');return false;}
+  }catch(e){
+    console.error(e);
+    document.getElementById('res-loading').style.display='none';
+    // Still show content with static categories
+    OPTS=JSON.parse(JSON.stringify(OPTS_STATIC));
+    document.getElementById('res-content').style.display='block';
+    updCats();
+    showErr('⚠️ No se pudo conectar con Google Sheets.\n\nPara ver tus datos:\n1. Abrí: docs.google.com/spreadsheets/d/'+SHEET_ID+'\n2. Clic en Archivo → Compartir → Publicar en la web\n3. Elegí "Todo el documento" → "Página web" → Publicar\n4. Recargá esta página\n\nMientras tanto, podés registrar movimientos localmente.');
+    return false;
+  }
 }
-function showErr(m){const b=document.getElementById('err-banner');b.textContent=m;b.style.display='block';setTimeout(()=>b.style.display='none',10000);}
+function showErr(m){
+  const b=document.getElementById('err-banner');
+  b.innerHTML=m.replace(/\n/g,'<br>');
+  b.style.display='block';
+  b.style.whiteSpace='pre-wrap';
+  // Don't auto-hide connection errors
+  if(!m.includes('Sheets')) setTimeout(()=>b.style.display='none',10000);
+}
 
 function getTxs(){return[...ALL.filter(t=>!deleted.has(t.i)),...localNew].sort((a,b)=>b.f.localeCompare(a.f));}
 function mTxs(y,m){return getTxs().filter(t=>{const p=t.f.split('/');return p.length===3&&parseInt(p[2])===y&&parseInt(p[1])-1===m;});}
