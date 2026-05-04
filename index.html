@@ -525,6 +525,30 @@ function loadEmbeddedData() {
 }
 const PUB_ID   = "2PACX-1vSk8tOs7qxryR3SRDk108bTuBUfQ71hfBQ3xLdfC_ebJuI22dtgyydndT3vw2hgyhENGYIr3vY_fJIo";
 const MES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const OPTS_STATIC = {
+  I: {
+    "Salarios":    ["Sueldo","Asignacion","Consultoria"],
+    "Bonos":       ["Gratificaciones","Transporte","AFP","Utilidades","Alimentacion","CTS"],
+    "Inversiones": ["Negocios","Intereses"],
+    "Otros":       ["Propinas","ETC"]
+  },
+  G: {
+    "Comida":          ["Antojos","Casa","Fruta"],
+    "Educacion":       ["Alessandro","Sasha","Brayan","Emilia"],
+    "Vestimenta":      ["Alessandro","Sasha","Brayan","Emilia"],
+    "Bienestar":       ["Salud","Belleza"],
+    "Transporte":      ["Combi","Mantenimiento","Combustible","Taxi"],
+    "Servicios":       ["Celular Sasha","Celular Brayan","Netflix","Membresias","Internet","Seguro Desgravamen","Alquiler","Luz","Agua","Gas","Carro","Spotify","Claude"],
+    "Compras":         ["Tecnologia","Muebles","Hogar","Mascota","Limpieza"],
+    "Entretenimiento": ["Familiar","Pareja","Personal","Otros"],
+    "Vacaciones":      ["Estadia","Alimentacion","Transporte"],
+    "Mantenimiento":   ["Arreglos","Carro","Tecnicos"],
+    "Obsequios":       ["Regalos","Donaciones"],
+    "Ahorros":         ["Bancos","Inversion"],
+    "Tramites":        ["Legales","Educativos","Pesonales"],
+    "Inversiones":     ["Terreno"]
+  }
+};
 const COLS = ['#00e5ff','#00ff9d','#ff4d6a','#ffb547','#a78bfa','#ff6bcd','#4dffb4','#ff8c42','#7dd3fc','#f0abfc','#fca5a5','#c4b5fd','#6ee7b7','#fde68a','#fb7185'];
 
 let ALL=[], OPTS={G:{},I:{}};
