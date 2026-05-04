@@ -423,7 +423,12 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
         <div class="fg" style="grid-column:1/-1"><label>Descripción</label><input type="text" id="fdesc" placeholder="Opcional..."></div>
       </div>
       <div style="display:flex;gap:8px"><button class="btn-r pri" onclick="guardar()">Guardar</button><button class="btn-r" onclick="limpiar()">Limpiar</button></div>
-      <div id="save-st" style="font-family:var(--fontc);font-size:11px;color:var(--c4);margin-top:10px;display:none"></div>
+      <div id="save-st" style="font-family:var(--fontc);font-size:11px;margin-top:10px;display:none;line-height:1.8"></div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--bor)">
+        <div style="font-family:var(--fontc);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt3);margin-bottom:8px">Sincronización con Google Sheets</div>
+        <div id="script-status" style="font-family:var(--fontc);font-size:12px;color:var(--txt3);margin-bottom:8px">Sin configurar — los registros se guardan solo localmente</div>
+        <button class="btn-r" style="font-size:11px;padding:6px 14px;border-color:var(--c1);color:var(--c1)" onclick="setAppsScriptURL()">⚙ Configurar Apps Script</button>
+      </div>
     </div>
 
   </div>
@@ -791,16 +796,51 @@ function setT(t){cT=t;document.getElementById('bg').className=t==='G'?'ga':'';do
 function updCats(){const cats=Object.keys(OPTS[cT]||{});document.getElementById('fcat').innerHTML=cats.map(c=>`<option>${c}</option>`).join('');updG();}
 function updG(){const cat=document.getElementById('fcat').value;const gs=(OPTS[cT]?.[cat]||[]);document.getElementById('fgrup').innerHTML=gs.map(g=>`<option>${g}</option>`).join('');}
 function limpiar(){document.getElementById('fmonto').value='';document.getElementById('fdesc').value='';document.getElementById('ffecha').value=new Date().toISOString().split('T')[0];updCats();}
-function guardar(){
+const APPS_SCRIPT_URL = ()=>localStorage.getItem('cg_script_url')||'';
+
+async function guardar(){
   const cat=document.getElementById('fcat').value,grup=document.getElementById('fgrup').value;
   const monto=parseFloat(document.getElementById('fmonto').value),fechaRaw=document.getElementById('ffecha').value;
   const desc=document.getElementById('fdesc').value.trim();
   if(!cat||!grup||!monto||!fechaRaw){alert('Completá todos los campos.');return;}
   const[y,mo,d]=fechaRaw.split('-');
-  const row={i:Date.now(),t:cT,c:cat,g:grup,d:desc,f:`${d}/${mo}/${y}`,m:monto};
-  localNew.push(row);localStorage.setItem('cg_new',JSON.stringify(localNew));
-  const st=document.getElementById('save-st');st.style.display='block';st.textContent=`Guardado localmente — ID sugerido: ${row.i}. Copiá al Google Sheet.`;
-  showToast('Guardado ✓');limpiar();refreshCur();updateSaldoUI();
+  const nextId=(Math.max(...getTxs().map(t=>typeof t.i==='number'?t.i:0),4574))+1;
+  const row={i:nextId,t:cT,c:cat,g:grup,d:desc,f:`${d}/${mo}/${y}`,m:monto};
+  const st=document.getElementById('save-st');
+  st.style.display='block';st.style.color='var(--c4)';st.textContent='Guardando...';
+  const scriptUrl=APPS_SCRIPT_URL();
+  if(scriptUrl){
+    try{
+      await fetch(scriptUrl,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'append',row})});
+      localNew.push(row);localStorage.setItem('cg_new',JSON.stringify(localNew));
+      st.style.color='var(--c2)';st.textContent='✓ Guardado en Google Sheets';
+      showToast('Guardado en Sheets ✓');
+    }catch(e){
+      localNew.push(row);localStorage.setItem('cg_new',JSON.stringify(localNew));
+      st.style.color='var(--c3)';st.textContent='⚠️ Error al conectar con Sheets — guardado localmente';
+      showToast('Guardado localmente');
+    }
+  } else {
+    localNew.push(row);localStorage.setItem('cg_new',JSON.stringify(localNew));
+    const fila=`${nextId}\t${cT==='G'?'Gastos':'Ingresos'}\t${cat}\t${grup}\t${desc}\t${d}/${mo}/${y}\t${monto}`;
+    st.style.color='var(--c4)';
+    st.innerHTML=`Guardado localmente. <a href="https://docs.google.com/spreadsheets/d/1E4InP15fKNo0OqdXyBD70UIzpJd0iZI8lpzbNGxulAU" target="_blank" style="color:var(--c1)">Abrir Sheet →</a><br><span style="font-family:var(--mono);font-size:11px;color:var(--txt);background:var(--bg4);padding:3px 8px;border-radius:4px;display:inline-block;margin-top:4px;user-select:all">${fila}</span>`;
+    showToast('Guardado localmente ✓');
+  }
+  limpiar();refreshCur();updateSaldoUI();
+}
+
+function setAppsScriptURL(){
+  const actual=localStorage.getItem('cg_script_url');
+  const msg=actual?`URL actual:\n${actual}\n\n¿Cambiarla? Pegá la nueva:`:'Pegá la URL de tu Google Apps Script Web App:';
+  const url=prompt(msg+`\n\nCómo obtenerla:\n1. Abrí tu Google Sheet\n2. Extensiones → Apps Script\n3. Pegá el código del archivo Code.gs\n4. Implementar → Nueva implementación\n5. Tipo: Aplicación web\n6. Ejecutar como: Yo\n7. Acceso: Cualquier persona\n8. Implementar → Copiar URL`);
+  if(url&&url.includes('script.google.com')){
+    localStorage.setItem('cg_script_url',url);
+    showToast('Apps Script URL guardada ✓');
+    document.getElementById('script-status').innerHTML='<span style="color:var(--c2)">✓ Conectado a Google Sheets</span>';
+  } else if(url) {
+    alert('URL inválida. Debe contener script.google.com');
+  }
 }
 
 // ── MOVIMIENTOS ──
