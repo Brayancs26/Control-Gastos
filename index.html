@@ -345,38 +345,69 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 
       <!-- Saldo anterior -->
       <div style="background:var(--bg4);border-radius:8px;padding:12px 16px;margin-bottom:14px;border:1px solid var(--bor)">
-        <div style="font-family:var(--fontc);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt3);margin-bottom:4px">Saldo anterior acumulado</div>
+        <div style="font-family:var(--fontc);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt3);margin-bottom:4px">Saldo semana anterior</div>
         <div style="font-family:var(--fontc);font-size:28px;font-weight:800;color:var(--c4)" id="saldo-anterior-display">S/ 0.00</div>
-        <div style="font-size:11px;color:var(--txt3);font-family:var(--fontc);margin-top:3px" id="saldo-anterior-sub">No hay saldo registrado</div>
+        <div style="font-size:11px;color:var(--txt3);font-family:var(--fontc);margin-top:3px" id="saldo-anterior-sub">Ingresá el saldo que tenías la semana pasada</div>
+        <!-- Input primera vez -->
+        <div id="saldo-anterior-wrap" style="margin-top:10px">
+          <div class="fg">
+            <label>Saldo que tenías la semana pasada (S/)</label>
+            <input type="number" id="saldo-anterior-input" placeholder="Ej: 3000.00" min="0" step="0.01"
+              style="color:var(--c4);border-color:var(--c4)">
+          </div>
+        </div>
       </div>
 
-      <!-- Ingreso de saldo nuevo de la semana -->
+      <!-- Ingreso de saldo actual -->
       <div class="fg" style="margin-bottom:12px">
-        <label>Saldo de esta semana (S/)</label>
-        <input type="number" id="saldo-semana" placeholder="Ej: 1500.00" min="0" step="0.01"
-          style="font-size:18px;font-weight:700;color:var(--c4);border-color:var(--c4)">
-        <div style="font-size:11px;color:var(--txt3);font-family:var(--fontc);margin-top:4px">Ingresá el dinero disponible para gastar esta semana</div>
+        <label>¿Cuánto tenés en la cuenta AHORA? (S/)</label>
+        <input type="number" id="saldo-semana" placeholder="Ej: 2500.00" min="0" step="0.01"
+          style="font-size:18px;font-weight:700;color:var(--c1);border-color:var(--c1)">
+        <div style="font-size:11px;color:var(--txt3);font-family:var(--fontc);margin-top:4px">
+          La diferencia con el saldo anterior = lo que gastaste esta semana
+        </div>
       </div>
-      <button class="btn-r" style="border-color:var(--c4);color:var(--c4);width:100%;margin-bottom:14px" onclick="setSaldoSemana()">Establecer saldo semanal</button>
+      <button class="btn-r" style="border-color:var(--c1);color:var(--c1);width:100%;margin-bottom:14px" onclick="setSaldoSemana()">Iniciar semana</button>
 
-      <!-- Barra de progreso semanal -->
+      <!-- Panel activo de la semana -->
       <div id="saldo-semana-panel" style="display:none">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div style="font-family:var(--fontc);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt3)">Gastado esta semana</div>
-          <div style="font-family:var(--fontc);font-size:13px;font-weight:800;color:var(--c3)" id="saldo-gastado-lbl">S/ 0.00</div>
+
+        <!-- Resumen diferencia -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+          <div style="background:var(--bg4);border-radius:7px;padding:10px 12px;border:1px solid var(--bor)">
+            <div style="font-family:var(--fontc);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt3);margin-bottom:3px">Saldo actual</div>
+            <div style="font-family:var(--fontc);font-size:18px;font-weight:800;color:var(--c1)" id="saldo-actual-lbl">S/ 0.00</div>
+          </div>
+          <div style="background:var(--bg4);border-radius:7px;padding:10px 12px;border:1px solid var(--bor)">
+            <div style="font-family:var(--fontc);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt3);margin-bottom:3px">Gastaste esta semana</div>
+            <div style="font-family:var(--fontc);font-size:18px;font-weight:800;color:var(--c3)" id="saldo-dif-lbl">S/ 0.00</div>
+          </div>
         </div>
-        <div style="height:10px;background:var(--bg4);border-radius:5px;overflow:hidden;margin-bottom:8px">
-          <div id="saldo-bar" style="height:100%;border-radius:5px;background:var(--c2);transition:width .4s,background .3s;width:0%"></div>
+
+        <!-- Progreso de registro -->
+        <div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <div style="font-family:var(--fontc);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt3)">Registrado en la app</div>
+            <div style="font-family:var(--fontc);font-size:13px;font-weight:800;color:var(--txt)" id="saldo-reg-lbl">S/ 0.00</div>
+          </div>
+          <div style="height:10px;background:var(--bg4);border-radius:5px;overflow:hidden;margin-bottom:6px">
+            <div id="saldo-bar" style="height:100%;border-radius:5px;background:var(--c1);transition:width .4s,background .3s;width:0%"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-family:var(--fontc);font-size:11px" id="saldo-msg">Falta registrar...</div>
+            <div style="font-family:var(--fontc);font-size:12px;color:var(--txt3)">Falta: <span id="saldo-falta-lbl" style="font-weight:800">S/ 0.00</span></div>
+          </div>
         </div>
-        <div style="display:flex;justify-content:space-between">
-          <div style="font-family:var(--fontc);font-size:12px;color:var(--txt3)">Disponible: <span id="saldo-disp" style="font-weight:800;color:var(--c2)">S/ 0.00</span></div>
-          <div style="font-family:var(--fontc);font-size:12px;color:var(--txt3)">Total: <span id="saldo-total-lbl" style="font-weight:700;color:var(--c4)">S/ 0.00</span></div>
+
+        <!-- Lista de gastos -->
+        <div style="padding:8px 12px;background:var(--bg4);border-radius:6px;border:1px solid var(--bor);margin-bottom:10px">
+          <div style="font-family:var(--fontc);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt3);margin-bottom:6px">Gastos registrados esta semana</div>
+          <div id="saldo-txs-list" style="max-height:130px;overflow-y:auto"></div>
         </div>
-        <div style="margin-top:10px;padding:8px 12px;background:var(--bg4);border-radius:6px;border:1px solid var(--bor)">
-          <div style="font-family:var(--fontc);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt3);margin-bottom:4px">Movimientos de esta semana</div>
-          <div id="saldo-txs-list" style="max-height:120px;overflow-y:auto;font-size:12px"></div>
-        </div>
-        <button class="btn-r" style="border-color:var(--c3);color:var(--c3);width:100%;margin-top:10px;font-size:11px" onclick="cerrarSemana()">Cerrar semana → pasar al saldo anterior</button>
+
+        <button class="btn-r" style="border-color:var(--c4);color:var(--c4);width:100%;font-size:11px" onclick="cerrarSemana()">
+          Cerrar semana → el saldo actual pasa a ser el anterior
+        </button>
       </div>
     </div>
 
@@ -1041,90 +1072,124 @@ function refreshCur(){
 }
 
 // ── SALDO SEMANAL ──
+// Lógica:
+// - saldoAnterior = lo que tenías la semana pasada
+// - saldoSemana   = lo que tenés en la cuenta AHORA
+// - diferencia    = saldoAnterior - saldoSemana = lo que gastaste
+// - barra muestra cuánto de esa diferencia ya registraste en la app
+// - al cerrar semana: saldoSemana pasa a ser el nuevo saldoAnterior
+
 let saldoState = JSON.parse(localStorage.getItem('cg_saldo') || JSON.stringify({
-  anterior: 0,          // saldo acumulado de semanas anteriores
-  semanaActual: 0,      // saldo fijado para la semana actual (0 = sin semana activa)
-  semanaInicio: null,   // fecha ISO de inicio de semana actual
-  semanaGastado: 0,     // calculado dinámico
+  anterior: 0,        // saldo de la semana pasada
+  semana: 0,          // saldo actual en cuenta
+  diferencia: 0,      // anterior - semana = total a registrar
+  inicio: null,       // fecha inicio semana (YYYY-MM-DD)
   activa: false
 }));
 
-function saveSaldo(){localStorage.setItem('cg_saldo',JSON.stringify(saldoState));}
+function saveSaldo(){ localStorage.setItem('cg_saldo', JSON.stringify(saldoState)); }
 
 function setSaldoSemana(){
-  const val = parseFloat(document.getElementById('saldo-semana').value);
-  if(!val||val<=0){alert('Ingresá un monto válido');return;}
-  // Si hay semana activa, cerrarla primero automáticamente
-  if(saldoState.activa) cerrarSemanaInternal();
-  saldoState.semanaActual = val;
-  saldoState.semanaInicio = new Date().toISOString().split('T')[0];
+  const semana = parseFloat(document.getElementById('saldo-semana').value);
+  if(!semana || semana < 0){ alert('Ingresá el saldo actual de tu cuenta'); return; }
+  if(!saldoState.activa && saldoState.anterior === 0){
+    // Primera vez: pedir también saldo anterior
+    const ant = parseFloat(document.getElementById('saldo-anterior-input')?.value || 0);
+    saldoState.anterior = ant;
+  }
+  saldoState.semana = semana;
+  saldoState.diferencia = Math.max(0, saldoState.anterior - semana);
+  saldoState.inicio = new Date().toISOString().split('T')[0];
   saldoState.activa = true;
   saveSaldo();
   document.getElementById('saldo-semana').value = '';
   updateSaldoUI();
-  showToast('Saldo semanal establecido: '+fm(val)+' ✓');
+  showToast('Semana iniciada — diferencia a registrar: ' + fm(saldoState.diferencia) + ' ✓');
 }
 
 function cerrarSemana(){
-  if(!confirm('¿Cerrar la semana? El saldo restante se sumará al saldo anterior para la próxima semana.'))return;
-  cerrarSemanaInternal();
-  updateSaldoUI();
-  showToast('Semana cerrada. Saldo anterior actualizado ✓');
-}
-
-function cerrarSemanaInternal(){
-  const gastado = getSemanaGastado();
-  const restante = Math.max(0, saldoState.semanaActual - gastado);
-  saldoState.anterior += restante;
-  saldoState.semanaActual = 0;
+  if(!confirm('¿Cerrar la semana?\n\nEl saldo de ESTA semana (' + fm(saldoState.semana) + ') pasará a ser el saldo ANTERIOR para la próxima semana.')) return;
+  saldoState.anterior = saldoState.semana;
+  saldoState.semana = 0;
+  saldoState.diferencia = 0;
+  saldoState.inicio = null;
   saldoState.activa = false;
-  saldoState.semanaInicio = null;
   saveSaldo();
+  updateSaldoUI();
+  showToast('Semana cerrada ✓  Saldo anterior actualizado a ' + fm(saldoState.anterior));
 }
 
-function getSemanaGastado(){
-  if(!saldoState.activa || !saldoState.semanaInicio) return 0;
-  const inicio = saldoState.semanaInicio;
-  // Sum all gastos registered locally since semanaInicio
-  return localNew.filter(t=>{
-    return t.t==='G' && t.f >= inicio.split('-').reverse().join('/');
-  }).reduce((a,t)=>a+t.m, 0);
+function getGastadoRegistrado(){
+  // Suma de gastos registrados en la app durante esta semana
+  if(!saldoState.activa || !saldoState.inicio) return 0;
+  const inicioFmt = saldoState.inicio.split('-').reverse().join('/'); // DD/MM/YYYY
+  return localNew
+    .filter(t => t.t === 'G' && t.f >= inicioFmt)
+    .reduce((a, t) => a + t.m, 0);
 }
 
 function updateSaldoUI(){
   const panel = document.getElementById('saldo-semana-panel');
   if(!panel) return;
-  // Saldo anterior display
-  document.getElementById('saldo-anterior-display').textContent = fm(saldoState.anterior);
-  document.getElementById('saldo-anterior-sub').textContent = saldoState.anterior > 0
-    ? 'Acumulado de semanas anteriores'
-    : 'Sin saldo acumulado aún';
+
+  // Saldo anterior
+  const antEl = document.getElementById('saldo-anterior-display');
+  if(antEl) antEl.textContent = fm(saldoState.anterior);
+  const antSub = document.getElementById('saldo-anterior-sub');
+  if(antSub) antSub.textContent = saldoState.anterior > 0
+    ? 'Saldo que tenías la semana pasada'
+    : 'Ingresá el saldo que tenías la semana pasada';
+
+  // Mostrar input de saldo anterior solo la primera vez
+  const antInput = document.getElementById('saldo-anterior-wrap');
+  if(antInput) antInput.style.display = saldoState.anterior === 0 && !saldoState.activa ? 'block' : 'none';
 
   if(saldoState.activa){
-    panel.style.display='block';
-    const gastado = getSemanaGastado();
-    const total = saldoState.semanaActual;
-    const disp = Math.max(0, total - gastado);
-    const pct = total > 0 ? Math.min((gastado/total)*100, 100) : 0;
-    const col = pct >= 100 ? 'var(--c3)' : pct >= 80 ? 'var(--c4)' : 'var(--c2)';
+    panel.style.display = 'block';
 
-    document.getElementById('saldo-gastado-lbl').textContent = fm(gastado);
-    document.getElementById('saldo-disp').textContent = fm(disp);
-    document.getElementById('saldo-disp').style.color = col;
-    document.getElementById('saldo-total-lbl').textContent = fm(total);
-    document.getElementById('saldo-bar').style.width = pct.toFixed(1)+'%';
-    document.getElementById('saldo-bar').style.background = col;
+    const diferencia = saldoState.diferencia;   // lo que gastaste en total esta semana
+    const registrado = getGastadoRegistrado();  // lo que ya registraste en la app
+    const falta = Math.max(0, diferencia - registrado); // lo que falta registrar
+    const pct = diferencia > 0 ? Math.min((registrado / diferencia) * 100, 100) : 0;
+    const col = pct >= 100 ? 'var(--c2)' : pct >= 80 ? 'var(--c4)' : 'var(--c1)';
 
-    // List of week transactions
-    const txsSemana = localNew.filter(t => t.t==='G' && saldoState.semanaInicio && t.f >= saldoState.semanaInicio.split('-').reverse().join('/'));
+    // Labels
+    document.getElementById('saldo-dif-lbl').textContent = fm(diferencia);
+    document.getElementById('saldo-reg-lbl').textContent = fm(registrado);
+    document.getElementById('saldo-falta-lbl').textContent = fm(falta);
+    document.getElementById('saldo-falta-lbl').style.color = falta <= 0 ? 'var(--c2)' : 'var(--c3)';
+    document.getElementById('saldo-actual-lbl').textContent = fm(saldoState.semana);
+
+    // Mensaje estado
+    const msgEl = document.getElementById('saldo-msg');
+    if(msgEl){
+      if(pct >= 100) {
+        msgEl.textContent = '✓ Todo registrado — nada falta';
+        msgEl.style.color = 'var(--c2)';
+      } else {
+        msgEl.textContent = `Falta registrar ${fm(falta)} de gastos esta semana`;
+        msgEl.style.color = 'var(--txt3)';
+      }
+    }
+
+    // Barra: llena cuando se registró todo
+    const bar = document.getElementById('saldo-bar');
+    if(bar){ bar.style.width = pct.toFixed(1)+'%'; bar.style.background = col; }
+
+    // Lista de gastos registrados esta semana
+    const inicioFmt = saldoState.inicio.split('-').reverse().join('/');
+    const txs = localNew.filter(t => t.t==='G' && t.f >= inicioFmt);
     const lista = document.getElementById('saldo-txs-list');
-    if(txsSemana.length){
-      lista.innerHTML = txsSemana.map(t=>`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--bor);color:var(--txt2)"><span style="font-family:var(--fontc);font-size:11px">${t.g}${t.d?' - '+t.d:''} <span style="color:var(--txt3)">${t.f}</span></span><span style="font-family:var(--fontc);font-size:11px;font-weight:700;color:var(--c3)">-${fm(t.m)}</span></div>`).join('');
-    } else {
-      lista.innerHTML = '<div style="color:var(--txt3);font-family:var(--fontc);font-size:11px;text-align:center;padding:8px">Sin gastos esta semana</div>';
+    if(lista){
+      lista.innerHTML = txs.length
+        ? txs.map(t=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bor)">
+            <span style="font-family:var(--fontc);font-size:11px;color:var(--txt2)">${t.g}${t.d?' — '+t.d:''} <span style="color:var(--txt3)">${t.f}</span></span>
+            <span style="font-family:var(--fontc);font-size:11px;font-weight:700;color:var(--c3)">-${fm(t.m)}</span>
+          </div>`).join('')
+        : '<div style="color:var(--txt3);font-family:var(--fontc);font-size:11px;text-align:center;padding:8px">Sin gastos registrados esta semana</div>';
     }
   } else {
-    panel.style.display='none';
+    panel.style.display = 'none';
   }
 }
 
