@@ -519,16 +519,29 @@ async function decompressData(b64) {
   const bin = atob(b64);
   const bytes = new Uint8Array(bin.length);
   for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
-  try {
-    const ds = new DecompressionStream('gzip');
-    const writer = ds.writable.getWriter();
-    writer.write(bytes); writer.close();
-    const out = await new Response(ds.readable).arrayBuffer();
-    return JSON.parse(new TextDecoder().decode(out));
-  } catch(e) {
-    // Fallback: try without decompression (plain JSON)
-    return JSON.parse(new TextDecoder().decode(bytes));
+
+  // Try native DecompressionStream (modern browsers)
+  if(typeof DecompressionStream !== 'undefined'){
+    try{
+      const ds = new DecompressionStream('gzip');
+      const writer = ds.writable.getWriter();
+      writer.write(bytes); writer.close();
+      const out = await new Response(ds.readable).arrayBuffer();
+      return JSON.parse(new TextDecoder().decode(out));
+    }catch(e){ console.warn('DecompressionStream failed:', e.message); }
   }
+
+  // Fallback: try as plain text
+  try{
+    return JSON.parse(new TextDecoder().decode(bytes));
+  }catch(e2){}
+
+  // Last resort: decode as latin1 string
+  try{
+    let str = '';
+    for(let i=0;i<bytes.length;i++) str += String.fromCharCode(bytes[i]);
+    return JSON.parse(str);
+  }catch(e3){ throw new Error('Cannot decompress embedded data'); }
 }
 const PUB_ID   = "2PACX-1vSk8tOs7qxryR3SRDk108bTuBUfQ71hfBQ3xLdfC_ebJuI22dtgyydndT3vw2hgyhENGYIr3vY_fJIo";
 const MES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -697,15 +710,16 @@ async function fetchSheet(sheetName){
 
 async function loadData(){
   try{
-    // ── Load embedded data (always works offline) ──
+    // ── Load embedded data FIRST (instant, always works) ──
     const embedded = await decompressData(EMBEDDED_DATA_B64);
     if(embedded && embedded.txs && embedded.txs.length > 0){
       ALL = embedded.txs;
       OPTS = embedded.opts || JSON.parse(JSON.stringify(OPTS_STATIC));
-      document.getElementById('sync-time').textContent = 'Datos: '+embedded.updated+' ('+ALL.length+' registros)';
-
-      // Try to update from Sheet in background (silent)
-      tryUpdateFromSheet();
+      const syncEl = document.getElementById('sync-time');
+      if(syncEl) syncEl.textContent = 'Datos al '+embedded.updated+' ('+ALL.length+' reg)';
+      console.log('✓ Embedded data loaded:', ALL.length, 'records');
+      // Try Sheet in background silently, don't wait
+      setTimeout(tryUpdateFromSheet, 500);
       return true;
     }
   }catch(e){ console.warn('Embedded data error:', e); }
@@ -1307,8 +1321,37 @@ function updateSaldoUI(){
 (async function(){
   const now=new Date();vY=now.getFullYear();vM=now.getMonth();updML();
   document.getElementById('ffecha').value=now.toISOString().split('T')[0];
-  const ok=await loadData();
-  if(ok){document.getElementById('res-loading').style.display='none';document.getElementById('res-content').style.display='block';updCats();renderResumen();}
+
+  // Show UI immediately with static categories while data loads
+  OPTS = JSON.parse(JSON.stringify(OPTS_STATIC));
+  updCats();
+  updateSaldoUI();
+
+  // Update script status
+  const scEl=document.getElementById('script-status');
+  if(scEl){const url=localStorage.getItem('cg_script_url');if(url)scEl.innerHTML='<span style="color:var(--c2)">✓ Conectado a Google Sheets</span>';}
+
+  // Load data with timeout
+  let loaded = false;
+
+  // Set a max wait of 3 seconds — then show whatever we have
+  const showContent = ()=>{
+    if(loaded) return;
+    loaded = true;
+    document.getElementById('res-loading').style.display='none';
+    document.getElementById('res-content').style.display='block';
+    renderResumen();
+  };
+  const timer = setTimeout(showContent, 3000);
+
+  const ok = await loadData();
+  clearTimeout(timer);
+  if(!loaded){
+    loaded = true;
+    document.getElementById('res-loading').style.display='none';
+    document.getElementById('res-content').style.display='block';
+    renderResumen();
+  }
 })();
 </script>
 </body>
