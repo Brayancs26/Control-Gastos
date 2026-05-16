@@ -699,64 +699,38 @@ async function guardar() {
 }
 
 async function saveToSheets(url, row) {
+  // JSONP: inyecta un <script> con la URL — bypasea CORS 100%
   return new Promise((resolve) => {
-    try {
-      // Usamos un iframe oculto + form POST — único método que funciona
-      // con Apps Script desde dominios externos (evita CORS y redirect blocks)
-      const iframeId = 'gs-iframe-' + Date.now();
-      const formId   = 'gs-form-'   + Date.now();
+    const cbName = 'gs_cb_' + Date.now();
+    const script = document.createElement('script');
+    let done = false;
 
-      // Crear iframe oculto como target del form
-      const iframe = document.createElement('iframe');
-      iframe.name = iframeId;
-      iframe.id   = iframeId;
-      iframe.style.cssText = 'display:none;width:0;height:0;border:0;position:absolute;left:-9999px';
-      document.body.appendChild(iframe);
+    const finish = (ok) => {
+      if (done) return; done = true;
+      try { delete window[cbName]; } catch(e) {}
+      try { document.head.removeChild(script); } catch(e) {}
+      resolve(ok);
+    };
 
-      // Crear form que apunta al iframe
-      const form = document.createElement('form');
-      form.method  = 'POST';
-      form.action  = url;
-      form.target  = iframeId;
-      form.style.display = 'none';
+    // Función callback que Apps Script va a llamar
+    window[cbName] = (data) => {
+      console.log('Sheets response:', data);
+      finish(data && data.ok);
+    };
 
-      // Agregar campos
-      const fields = {
-        action: 'append',
-        i: row.i, t: row.t, c: row.c,
-        g: row.g, d: row.d||'', f: row.f, m: row.m
-      };
-      Object.entries(fields).forEach(([k,v]) => {
-        const inp = document.createElement('input');
-        inp.type  = 'hidden';
-        inp.name  = k;
-        inp.value = v;
-        form.appendChild(inp);
-      });
+    // Construir URL con parámetros
+    const p = new URLSearchParams({
+      callback: cbName,
+      action:   'append',
+      i: row.i, t: row.t, c: row.c,
+      g: row.g, d: row.d||'', f: row.f, m: row.m
+    });
 
-      document.body.appendChild(form);
+    script.src = url + '?' + p.toString();
+    script.onerror = () => finish(false);
+    setTimeout(() => finish(false), 15000); // timeout 15s
 
-      // Escuchar cuando el iframe carga (= Apps Script respondió)
-      let done = false;
-      const finish = (ok) => {
-        if(done) return; done = true;
-        try { document.body.removeChild(iframe); } catch(e){}
-        try { document.body.removeChild(form);   } catch(e){}
-        resolve(ok);
-      };
-
-      iframe.onload = () => finish(true);
-      iframe.onerror = () => finish(false);
-
-      // Timeout de 10 segundos
-      setTimeout(() => finish(true), 10000); // asumir ok si no hay error
-
-      form.submit();
-
-    } catch(e) {
-      console.error('saveToSheets error:', e);
-      resolve(false);
-    }
+    document.head.appendChild(script);
   });
 }
 
