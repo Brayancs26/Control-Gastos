@@ -467,7 +467,10 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
       <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--bor)">
         <div style="font-family:var(--fontc);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt3);margin-bottom:6px">Sincronización con Google Sheets</div>
         <div id="script-status" style="font-family:var(--fontc);font-size:12px;margin-bottom:8px;color:var(--txt3)">Sin configurar</div>
-        <button class="btn-r" style="font-size:11px;padding:6px 14px;border-color:var(--c1);color:var(--c1)" onclick="setAppsScriptURL()">⚙ Configurar Apps Script</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-r" style="font-size:11px;padding:6px 14px;border-color:var(--c1);color:var(--c1)" onclick="setAppsScriptURL()">⚙ Configurar URL</button>
+          <button class="btn-r" style="font-size:11px;padding:6px 14px;border-color:var(--c2);color:var(--c2)" onclick="testAppsScript()">▶ Probar conexión</button>
+        </div>
       </div>
     </div>
 
@@ -731,8 +734,8 @@ async function guardar() {
     } else {
       localNew.push(row); localStorage.setItem('cg_new', JSON.stringify(localNew));
       st.style.color = 'var(--c3)';
-      st.textContent = '⚠️ Error Sheets — guardado localmente';
-      toast('Guardado localmente');
+      st.innerHTML = '⚠️ Error Sheets — guardado localmente<br><span style="font-size:10px;color:var(--txt3)">Abrí F12 → Console para ver el error</span>';
+      toast('Guardado localmente (ver F12)');
     }
   } else {
     localNew.push(row); localStorage.setItem('cg_new', JSON.stringify(localNew));
@@ -747,35 +750,44 @@ async function guardar() {
 function saveToSheets(row) {
   return new Promise((resolve) => {
     const scriptUrl = localStorage.getItem('cg_script_url');
-    if (!scriptUrl) { resolve(false); return; }
+    if (!scriptUrl) {
+      console.warn('No Apps Script URL configurada');
+      resolve(false); return;
+    }
 
     const cbName = 'gs_cb_' + Date.now();
     const script = document.createElement('script');
     let done = false;
 
-    const finish = (ok) => {
+    const finish = (ok, reason) => {
       if (done) return; done = true;
+      console.log('saveToSheets finish:', ok, reason || '');
       try { delete window[cbName]; } catch(e) {}
       try { document.head.removeChild(script); } catch(e) {}
       resolve(ok);
     };
 
-    // Apps Script llama esta función con el resultado
     window[cbName] = (data) => {
-      console.log('Sheets response:', data);
-      finish(data && data.ok);
+      console.log('✓ Sheets JSONP response:', JSON.stringify(data));
+      finish(data && data.ok, 'jsonp-ok');
     };
 
     const params = new URLSearchParams({
       callback: cbName,
-      action: 'append',
+      action:   'append',
       i: row.i, t: row.t, c: row.c,
       g: row.g, d: row.d || '', f: row.f, m: row.m
     });
 
-    script.src = scriptUrl + '?' + params.toString();
-    script.onerror = () => finish(false);
-    setTimeout(() => finish(false), 15000);
+    const fullUrl = scriptUrl + '?' + params.toString();
+    console.log('JSONP URL:', fullUrl.substring(0, 120) + '...');
+
+    script.src = fullUrl;
+    script.onerror = (e) => {
+      console.error('JSONP script error:', e);
+      finish(false, 'script-error');
+    };
+    setTimeout(() => finish(false, 'timeout-15s'), 15000);
     document.head.appendChild(script);
   });
 }
