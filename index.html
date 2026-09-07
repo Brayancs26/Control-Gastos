@@ -228,6 +228,66 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 .sync-dot{width:6px;height:6px;border-radius:50%;background:var(--c2);display:inline-block;margin-right:5px;animation:pulse 2s infinite;box-shadow:0 0 6px var(--c2)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 </style>
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit, where } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD4IbB9c8ELVfEZqOIrHc_-jWCp4f_AHv0",
+      authDomain: "gastos-familiares-ddc42.firebaseapp.com",
+      projectId: "gastos-familiares-ddc42",
+      storageBucket: "gastos-familiares-ddc42.firebasestorage.app",
+      messagingSenderId: "912421384967",
+      appId: "1:912421384967:web:755731f5c75d56179c0ba2"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+
+    // Exponer funciones globalmente para el dashboard
+    window.fbSave = async (row) => {
+      try {
+        await addDoc(collection(db, 'transacciones'), {
+          id:          row.i,
+          tipo:        row.t === 'G' ? 'Gastos' : 'Ingresos',
+          categoria:   row.c,
+          grupo:       row.g,
+          descripcion: row.d || '',
+          fecha:       row.f,
+          monto:       row.m,
+          creado:      new Date().toISOString()
+        });
+        console.log('✓ Guardado en Firebase:', row.i);
+        return true;
+      } catch(e) {
+        console.error('Firebase error:', e);
+        return false;
+      }
+    };
+
+    window.fbGetNew = async (maxId) => {
+      try {
+        const q = query(
+          collection(db, 'transacciones'),
+          where('id', '>', maxId),
+          orderBy('id'),
+          limit(500)
+        );
+        const snap = await getDocs(q);
+        return snap.docs.map(d => {
+          const r = d.data();
+          return { i: r.id, t: r.tipo==='Gastos'?'G':'I', c: r.categoria, g: r.grupo, d: r.descripcion||'', f: r.fecha, m: r.monto };
+        });
+      } catch(e) {
+        console.error('Firebase sync error:', e);
+        return [];
+      }
+    };
+
+    window.firebaseReady = true;
+    console.log('✓ Firebase inicializado');
+  </script>
 </head>
 <body>
 
@@ -729,8 +789,8 @@ async function guardar() {
     if (ok) {
       localNew.push(row); localStorage.setItem('cg_new', JSON.stringify(localNew));
       st.style.color = 'var(--c2)';
-      st.textContent = '✓ Guardado en Google Sheets';
-      toast('✓ Guardado en Google Sheets');
+      st.textContent = '✓ Guardado en Firebase';
+      toast('✓ Guardado en Firebase');
     } else {
       localNew.push(row); localStorage.setItem('cg_new', JSON.stringify(localNew));
       st.style.color = 'var(--c3)';
@@ -748,26 +808,22 @@ async function guardar() {
 
 // ── Guardar en Google Sheets via JSONP (bypass CORS) ──
 async function saveToSheets(row) {
-  const scriptUrl = localStorage.getItem('cg_script_url');
-  if (!scriptUrl) return false;
+  // Guardar en Firebase Firestore — funciona 100% sin CORS
   try {
-    // POST con body como form-urlencoded
-    // Apps Script recibe esto en e.parameter sin problemas
-    const body = new URLSearchParams({
-      action: 'append',
-      i: row.i, t: row.t, c: row.c,
-      g: row.g, d: row.d || '', f: row.f, m: row.m
-    });
-    await fetch(scriptUrl, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body.toString()
-    });
-    console.log('✓ POST enviado');
-    return true;
+    if (typeof window.fbSave !== 'function') {
+      // Firebase no cargó aún — esperar hasta 3 segundos
+      await new Promise(resolve => {
+        let tries = 0;
+        const check = setInterval(() => {
+          tries++;
+          if (window.fbSave || tries > 30) { clearInterval(check); resolve(); }
+        }, 100);
+      });
+    }
+    if (typeof window.fbSave !== 'function') return false;
+    return await window.fbSave(row);
   } catch(e) {
-    console.error('Error:', e);
+    console.error('saveToSheets error:', e);
     return false;
   }
 }
@@ -1318,22 +1374,30 @@ function exportClasif(){
 
   // 5. Estado de Apps Script
   const scEl = document.getElementById('script-status');
-  if(scEl) {
-    const url = localStorage.getItem('cg_script_url');
-    scEl.innerHTML = url
-      ? '<span style="color:var(--c2)">✓ Apps Script configurado</span>'
-      : '<span style="color:var(--c4)">⚠️ Sin configurar — pegá la URL del Apps Script</span>';
-  }
+  if(scEl) scEl.innerHTML = '<span style="color:var(--c2)">✓ Firebase Firestore</span>';
 
   // 6. Intentar sync con Sheets en background (silencioso)
   setTimeout(trySheetSync, 3000);
 })();
 
 async function trySheetSync(){
-  // No podemos leer datos con no-cors
-  // El sync se maneja con localStorage — los datos nuevos
-  // quedan en localNew y se muestran en el dashboard
-  console.log('Sync: usando datos locales y embebidos');
+  // Sync desde Firebase — trae registros nuevos
+  try {
+    if (typeof window.fbGetNew !== 'function') return;
+    const maxId = Math.max(...ALL.map(t => typeof t.i === 'number' ? t.i : 0), 0);
+    const nuevos = await window.fbGetNew(maxId);
+    if (nuevos && nuevos.length > 0) {
+      const localIds = new Set(localNew.map(t => t.i));
+      const reales = nuevos.filter(t => !localIds.has(t.i));
+      if (reales.length > 0) {
+        ALL = [...ALL, ...reales];
+        const el = document.getElementById('sync-time');
+        if(el) el.textContent = '✓ Firebase ' + new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'}) + ' (' + (ALL.length + localNew.length) + ' reg)';
+        refreshCur();
+        console.log('✓ Sync Firebase:', reales.length, 'nuevos');
+      }
+    }
+  } catch(e) { console.warn('Sync error:', e.message); }
 }
 
 </script>
