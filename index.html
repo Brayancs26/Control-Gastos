@@ -285,6 +285,33 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
       }
     };
 
+    window.fbGetAll = async () => {
+      try {
+        // Cargar todos los registros en lotes de 1000
+        const { getDocs: gd, collection: col, query: q, orderBy: ob, limit: lim, startAfter: sa } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+        let all = [];
+        let last = null;
+        while(true) {
+          const qry = last
+            ? query(collection(db,'transacciones'), orderBy('id'), startAfter(last), limit(1000))
+            : query(collection(db,'transacciones'), orderBy('id'), limit(1000));
+          const snap = await getDocs(qry);
+          if (snap.empty) break;
+          snap.docs.forEach(d => {
+            const r = d.data();
+            all.push({ i: r.id, t: r.tipo==='Gastos'?'G':'I', c: r.categoria, g: r.grupo, d: r.descripcion||'', f: r.fecha, m: r.monto });
+          });
+          last = snap.docs[snap.docs.length - 1];
+          if (snap.docs.length < 1000) break;
+        }
+        console.log('✓ Firebase total:', all.length);
+        return all;
+      } catch(e) {
+        console.error('fbGetAll error:', e);
+        return [];
+      }
+    };
+
     window.firebaseReady = true;
     console.log('✓ Firebase inicializado');
   </script>
@@ -1381,21 +1408,17 @@ function exportClasif(){
 })();
 
 async function trySheetSync(){
-  // Sync desde Firebase — trae registros nuevos
+  // Cargar TODOS los datos desde Firebase
   try {
-    if (typeof window.fbGetNew !== 'function') return;
-    const maxId = Math.max(...ALL.map(t => typeof t.i === 'number' ? t.i : 0), 0);
-    const nuevos = await window.fbGetNew(maxId);
-    if (nuevos && nuevos.length > 0) {
-      const localIds = new Set(localNew.map(t => t.i));
-      const reales = nuevos.filter(t => !localIds.has(t.i));
-      if (reales.length > 0) {
-        ALL = [...ALL, ...reales];
-        const el = document.getElementById('sync-time');
-        if(el) el.textContent = '✓ Firebase ' + new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'}) + ' (' + (ALL.length + localNew.length) + ' reg)';
-        refreshCur();
-        console.log('✓ Sync Firebase:', reales.length, 'nuevos');
-      }
+    if (typeof window.fbGetAll !== 'function') return;
+    const fbData = await window.fbGetAll();
+    if (fbData && fbData.length > 0) {
+      // Reemplazar ALL con datos de Firebase (más actualizados)
+      ALL = fbData;
+      const el = document.getElementById('sync-time');
+      if(el) el.textContent = '✓ Firebase ' + new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'}) + ' (' + ALL.length + ' reg)';
+      refreshCur();
+      console.log('✓ Firebase cargado:', ALL.length, 'registros');
     }
   } catch(e) { console.warn('Sync error:', e.message); }
 }
