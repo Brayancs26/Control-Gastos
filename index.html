@@ -750,21 +750,53 @@ async function guardar() {
 async function saveToSheets(row) {
   const scriptUrl = localStorage.getItem('cg_script_url');
   if (!scriptUrl) return false;
-  const params = new URLSearchParams({
-    action: 'append',
-    i: row.i, t: row.t, c: row.c,
-    g: row.g, d: row.d || '', f: row.f, m: row.m
+
+  return new Promise((resolve) => {
+    try {
+      // Crear form + iframe oculto
+      // El form POST envía todos los params sin restricciones CORS
+      const uid = Date.now();
+      const iframe = document.createElement('iframe');
+      iframe.name = 'gs_frame_' + uid;
+      iframe.style.cssText = 'display:none;position:absolute;left:-9999px';
+      document.body.appendChild(iframe);
+
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = scriptUrl;
+      form.target = iframe.name;
+      form.style.display = 'none';
+
+      const fields = { action:'append', i:row.i, t:row.t, c:row.c, g:row.g, d:row.d||'', f:row.f, m:row.m };
+      Object.entries(fields).forEach(([k,v]) => {
+        const inp = document.createElement('input');
+        inp.type = 'hidden'; inp.name = k; inp.value = v;
+        form.appendChild(inp);
+      });
+
+      document.body.appendChild(form);
+
+      // El iframe carga cuando Apps Script responde
+      let done = false;
+      const finish = (ok) => {
+        if (done) return; done = true;
+        try { document.body.removeChild(iframe); } catch(e){}
+        try { document.body.removeChild(form); } catch(e){}
+        resolve(ok);
+      };
+
+      iframe.onload  = () => { console.log('✓ Sheets form POST respondió'); finish(true); };
+      iframe.onerror = () => { console.error('✗ iframe error'); finish(false); };
+      setTimeout(() => finish(true), 8000); // asumir ok si no hay error
+
+      form.submit();
+      console.log('Form POST enviado a Apps Script');
+
+    } catch(e) {
+      console.error('saveToSheets error:', e);
+      resolve(false);
+    }
   });
-  const url = scriptUrl + '?' + params.toString();
-  console.log('Saving to Sheets:', url.substring(0, 100) + '...');
-  try {
-    await fetch(url, { method: 'GET', mode: 'no-cors', redirect: 'follow' });
-    console.log('✓ Request enviado a Sheets');
-    return true;
-  } catch(e) {
-    console.error('fetch error:', e.message);
-    return false;
-  }
 }
 
 async function testAppsScript() {
