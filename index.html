@@ -792,6 +792,41 @@ function saveToSheets(row) {
   });
 }
 
+function testAppsScript() {
+  const url = localStorage.getItem('cg_script_url');
+  if(!url){ alert('Primero configurá la URL del Apps Script'); return; }
+  const st = document.getElementById('script-status');
+  st.innerHTML = '<span style="color:var(--c4)">Probando conexión...</span>';
+
+  const cbName = 'test_cb_' + Date.now();
+  const script = document.createElement('script');
+  let done = false;
+
+  const finish = (ok, msg) => {
+    if(done) return; done = true;
+    try { document.head.removeChild(script); } catch(e){}
+    try { delete window[cbName]; } catch(e){}
+    if(ok) {
+      st.innerHTML = '<span style="color:var(--c2)">✓ Conexión exitosa con Google Sheets</span>';
+      toast('✓ Conectado a Google Sheets');
+    } else {
+      st.innerHTML = '<span style="color:var(--c3)">✗ Error: ' + msg + '</span>';
+      toast('Error de conexión — ver F12');
+    }
+  };
+
+  window[cbName] = (data) => {
+    console.log('Test response:', data);
+    if(data && data.ok) finish(true, '');
+    else finish(false, (data && data.error) || 'sin respuesta');
+  };
+
+  script.src = url + '?callback=' + cbName + '&test=1';
+  script.onerror = () => finish(false, 'Script no accesible. Verificá que la implementación sea "Cualquier persona"');
+  setTimeout(() => finish(false, 'Timeout — el script no respondió en 10s'), 10000);
+  document.head.appendChild(script);
+}
+
 function setAppsScriptURL() {
   const actual = localStorage.getItem('cg_script_url');
   const url = prompt(
